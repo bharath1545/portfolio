@@ -173,22 +173,54 @@ function Calendar() {
 }
 
 function Hero() {
+  const heroRef = useRef<HTMLElement>(null)
+  const pointerFrame = useRef(0)
+  const reduced = useReducedMotion()
+
+  useEffect(() => () => {
+    window.cancelAnimationFrame(pointerFrame.current)
+  }, [])
+
+  const moveSpotlight = (event: PointerEvent<HTMLElement>) => {
+    if (reduced || event.pointerType === 'touch') return
+    const hero = heroRef.current
+    if (!hero || pointerFrame.current) return
+    const { clientX, clientY } = event
+    pointerFrame.current = window.requestAnimationFrame(() => {
+      pointerFrame.current = 0
+      const bounds = hero.getBoundingClientRect()
+      const x = clientX - bounds.left
+      const y = clientY - bounds.top
+      hero.style.setProperty('--hero-x', `${x}px`)
+      hero.style.setProperty('--hero-y', `${y}px`)
+      hero.style.setProperty('--object-x', `${((x / bounds.width) - 0.5) * -10}px`)
+      hero.style.setProperty('--object-y', `${((y / bounds.height) - 0.5) * -8}px`)
+    })
+  }
+
+  const resetSpotlight = () => {
+    if (pointerFrame.current) window.cancelAnimationFrame(pointerFrame.current)
+    pointerFrame.current = 0
+    heroRef.current?.style.setProperty('--object-x', '0px')
+    heroRef.current?.style.setProperty('--object-y', '0px')
+  }
+
   return (
-    <section id="top" className="hero-section">
+    <section ref={heroRef} id="top" className="hero-section" onPointerMove={moveSpotlight} onPointerLeave={resetSpotlight}>
       <div className="hero-grain" aria-hidden="true" />
       <div className="hero-copy">
-        <motion.p className="eyebrow" initial="hidden" animate="visible" variants={reveal}>
+        <motion.p className="eyebrow" initial="hidden" animate="visible" variants={reveal} transition={{ delay: 0.12, duration: 0.7 }}>
           ECE STUDENT <span className="eyebrow-divider">/</span> MANGALURU, INDIA
         </motion.p>
-        <motion.h1 initial="hidden" animate="visible" variants={reveal}>
+        <motion.h1 initial="hidden" animate="visible" variants={reveal} transition={{ delay: 0.2, duration: 0.8 }}>
           Bharath
           <br />
           <span>Bhat<span className="hero-period">.</span></span>
         </motion.h1>
-        <motion.p className="hero-position" initial="hidden" animate="visible" variants={reveal}>
+        <motion.p className="hero-position" initial="hidden" animate="visible" variants={reveal} transition={{ delay: 0.34, duration: 0.7 }}>
           {profile.positioning}
         </motion.p>
-        <motion.div className="hero-bottom" initial="hidden" animate="visible" variants={reveal}>
+        <motion.div className="hero-bottom" initial="hidden" animate="visible" variants={reveal} transition={{ delay: 0.48, duration: 0.7 }}>
           <a href="#doors" className="hero-cta">Walk through my work <ArrowDown size={15} /></a>
           <p>One portfolio.<br />Four rooms to explore.</p>
         </motion.div>
@@ -197,7 +229,7 @@ function Hero() {
         className="hero-object"
         initial={{ opacity: 0, scale: 0.94 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.8, delay: 0.2 }}
+        transition={{ duration: 0.9, delay: 0.25, ease: [0.2, 0.7, 0.2, 1] }}
       >
         <div className="hero-coordinate">MANGALURU&nbsp; / &nbsp; INDIA</div>
         <PortraitSlot />
@@ -241,6 +273,10 @@ function DoorCard({ door, index, onOpen }: { door: Door; index: number; onOpen: 
       onBlur={() => setHovered(false)}
       onClick={openRoom}
       whileHover={reduced ? undefined : { y: -6 }}
+      initial={reduced ? false : { opacity: 0, y: 28, rotateY: 3 }}
+      whileInView={{ opacity: 1, y: 0, rotateY: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.62, delay: reduced ? 0 : index * 0.09, ease: [0.2, 0.7, 0.2, 1] }}
       aria-label={`Open ${door.title} room`}
     >
       <span className="door-topline"><span>ROOM {door.number}</span><ArrowUpRight size={15} /></span>
@@ -330,10 +366,16 @@ function SchematicPlaceholder({ project }: { project: Project }) {
 }
 
 function ProjectCard({ project, index, accent }: { project: Project; index: number; accent: string }) {
+  const reduced = useReducedMotion()
+
   return (
-    <article
+    <motion.article
       className="room-project"
       style={{ '--project-index': index, '--door-color': accent } as CSSProperties}
+      initial={reduced ? false : { opacity: 0, filter: 'blur(8px)' }}
+      whileInView={{ opacity: 1, filter: 'blur(0px)' }}
+      viewport={{ once: true, amount: 0.18 }}
+      transition={{ duration: 0.65, delay: reduced ? 0 : index * 0.08 }}
     >
       <div className="project-card-meta"><span>PROJECT / {project.icon}</span><span>0{index + 1}</span></div>
       <SchematicPlaceholder project={project} />
@@ -343,7 +385,7 @@ function ProjectCard({ project, index, accent }: { project: Project; index: numb
         <p>{project.description}</p>
         <div className="project-tags">{project.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
       </div>
-    </article>
+    </motion.article>
   )
 }
 
@@ -430,6 +472,8 @@ function Room({
 }
 
 function NumbersBoard() {
+  const reduced = useReducedMotion()
+
   return (
     <section className="numbers-section" aria-label="Portfolio facts">
       <div className="numbers-heading">
@@ -438,13 +482,20 @@ function NumbersBoard() {
       </div>
       <div className="numbers-board">
         {facts.map((fact) => (
-          <div className="number-cell" key={fact.label}>
+          <motion.div
+            className="number-cell"
+            key={fact.label}
+            initial={reduced ? false : { opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.48, delay: reduced ? 0 : facts.indexOf(fact) * 0.09 }}
+          >
             <span className="number-label">{fact.label}</span>
             <span className="flap-number" aria-label={`${fact.value} ${fact.label}`}>
               {fact.value.split('').map((character, index) => <span key={`${fact.label}-${index}`} className="flap-character">{character}</span>)}
             </span>
             <span className="number-detail">{fact.detail}</span>
-          </div>
+          </motion.div>
         ))}
       </div>
     </section>
@@ -493,25 +544,45 @@ function Timeline() {
           <small>ROLLING BACKWARDS</small>
         </div>
         <div className="story-chapters">
-          <article className="story-chapter" ref={latestRef}>
+          <motion.article
+            className="story-chapter"
+            ref={latestRef}
+            initial={reduced ? false : { opacity: 0, x: 22 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.58 }}
+          >
             <span className="chapter-marker"><span /></span>
             <span className="chapter-date">EXPECTED · JUN 2028</span>
             <h3>Looking ahead</h3>
             <p>B.E. Electronics and Communication Engineering at AJ Institute of Engineering and Technology, Mangaluru.</p>
             <span className="chapter-foot">CGPA 8.2 / 10</span>
-          </article>
-          <article className="story-chapter" ref={startRef}>
+          </motion.article>
+          <motion.article
+            className="story-chapter"
+            ref={startRef}
+            initial={reduced ? false : { opacity: 0, x: 22 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.58, delay: reduced ? 0 : 0.12 }}
+          >
             <span className="chapter-marker"><span /></span>
             <span className="chapter-date">SEP 2024</span>
             <h3>Where it began</h3>
             <p>Started B.E. Electronics and Communication Engineering at AJIET, Mangaluru.</p>
-          </article>
-          <div className="story-undated">
+          </motion.article>
+          <motion.div
+            className="story-undated"
+            initial={reduced ? false : { opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.58 }}
+          >
             <span>UNDATED CHAPTER</span>
             <h3>Learning by doing</h3>
             <article><span>INTERNSHIP · {internship.duration.toUpperCase()}</span><p>{internship.organization} — {internship.description}</p></article>
             {awards.map((award) => <article key={award.title}><span>RECOGNITION</span><p>{award.title}, {award.detail}</p></article>)}
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>
@@ -524,6 +595,7 @@ function Toolbox() {
   const [pressed, setPressed] = useState('')
   const allSkills = useMemo(() => skillGroups.flatMap((group) => group.skills), [])
   const visibleSkills = allSkills.filter((skill) => skill.toLowerCase().includes(query.trim().toLowerCase()))
+  const reduced = useReducedMotion()
 
   useEffect(() => {
     const listen = (event: globalThis.KeyboardEvent) => {
@@ -551,21 +623,29 @@ function Toolbox() {
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Type a skill..." />
             <span className="search-shortcut">⌕</span>
           </label>
-          <div className="tool-grid" aria-label="Skills keyboard">
+          <motion.div
+            className="tool-grid"
+            aria-label="Skills keyboard"
+            initial={reduced ? false : 'hidden'}
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={{ hidden: {}, visible: { transition: { staggerChildren: reduced ? 0 : 0.025 } } }}
+          >
             {visibleSkills.map((skill, index) => (
-              <button
+              <motion.button
                 type="button"
                 key={`${skill}-${index}`}
                 title={tooltips[skill]}
                 className={`tool-key ${selected === skill ? 'tool-key-selected' : ''} ${pressed && skill.toLowerCase().includes(pressed) ? 'tool-key-pressed' : ''}`}
                 onClick={() => setSelected(skill)}
+                variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } }}
               >
                 <span className="tool-app-icon" aria-hidden="true">{skill.slice(0, 1)}</span>
                 <span>{skill}</span><span className="key-corner">↗</span>
-              </button>
+              </motion.button>
             ))}
             {visibleSkills.length === 0 && <p className="no-tools">No matching skills in the list.</p>}
-          </div>
+          </motion.div>
           <div className="toolbox-status"><span className="live-dot" /> KEYBOARD READY <span>/{allSkills.length} SKILLS</span></div>
         </div>
         <div className="tool-detail">
@@ -596,6 +676,10 @@ function CertificationCard({ certification, index }: { certification: (typeof ce
       onClick={() => {
         if (!reduced) setFlipped((value) => !value)
       }}
+      initial={reduced ? false : { opacity: 0, y: 20, rotateX: 5 }}
+      whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.58, delay: reduced ? 0 : index * 0.07 }}
       aria-label={`${certification.name}, ${certification.issuer}${certification.badge ? `, ${certification.badge}` : ''}. Click to flip.`}
       whileHover={reduced ? undefined : { y: -5 }}
       style={{ '--card-index': index } as CSSProperties}
@@ -648,6 +732,8 @@ function Learning() {
 }
 
 function ContactSection() {
+  const reduced = useReducedMotion()
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = event.currentTarget
@@ -677,14 +763,21 @@ function ContactSection() {
           </div>
           <a className="closing-resume" href={profile.resume} download="Bharath_Bhat_Resume.pdf"><Download size={15} /> Download resume</a>
         </div>
-        <form className="contact-form" onSubmit={submit}>
+        <motion.form
+          className="contact-form"
+          onSubmit={submit}
+          initial={reduced ? false : { opacity: 0, y: 22 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.15 }}
+          transition={{ duration: 0.62 }}
+        >
           <span>OR SEND A NOTE</span>
           <label>Your name<input name="name" autoComplete="name" placeholder="Name" required /></label>
           <label>Your email<input name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></label>
           <label>Your message<textarea name="message" rows={4} placeholder="What would you like to talk about?" required /></label>
           <button type="submit"><Mail size={15} /> OPEN A PREFILLED EMAIL <ArrowUpRight size={14} /></button>
           <small>This opens your email app; nothing is sent from this website.</small>
-        </form>
+        </motion.form>
       </div>
       <div className="footer-bottom">
         <a href="#top">BB. <span>BACK TO THE BEGINNING ↑</span></a>

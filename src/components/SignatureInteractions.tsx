@@ -289,11 +289,21 @@ export function PortraitSlot() {
       const ratio = Math.min(window.devicePixelRatio || 1, 2)
       const w = bounds.width
       const h = bounds.height
-      if (canvas.width !== w * ratio || canvas.height !== h * ratio) {
-        canvas.width = w * ratio
-        canvas.height = h * ratio
-        mask.width = color.width = w * ratio
-        mask.height = color.height = h * ratio
+      if (w <= 0 || h <= 0) return
+      const pixelWidth = Math.round(w * ratio)
+      const pixelHeight = Math.round(h * ratio)
+      if (
+        canvas.width !== pixelWidth ||
+        canvas.height !== pixelHeight ||
+        mask.width !== pixelWidth ||
+        mask.height !== pixelHeight ||
+        color.width !== pixelWidth ||
+        color.height !== pixelHeight
+      ) {
+        canvas.width = pixelWidth
+        canvas.height = pixelHeight
+        mask.width = color.width = pixelWidth
+        mask.height = color.height = pixelHeight
         context.setTransform(ratio, 0, 0, ratio, 0, 0)
         maskContext.setTransform(ratio, 0, 0, ratio, 0, 0)
         colorContext.setTransform(ratio, 0, 0, ratio, 0, 0)

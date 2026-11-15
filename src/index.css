@@ -732,3 +732,35 @@ main > section[id], footer[id], .room-view { scroll-margin-top: 88px; }
 @media (prefers-reduced-motion: reduce) {
   .ribbon-content { animation: none; }
 }
+
+@media (max-width: 680px) {
+  .hero-section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding: 126px 22px 62px;
+  }
+  .hero-copy { min-width: 0; }
+  .hero-copy h1 { font-size: clamp(68px, 20vw, 112px); }
+  .hero-position { max-width: 34ch; }
+  .hero-object {
+    width: 100%;
+    min-height: clamp(400px, 118vw, 470px);
+    margin-top: 22px;
+  }
+  .portrait-placeholder, .portrait-frame {
+    top: 4%;
+    left: 8%;
+    width: 56%;
+    height: 58%;
+  }
+  .calendar {
+    right: 0;
+    bottom: 0;
+    width: min(70%, 275px);
+    min-width: 205px;
+    height: clamp(174px, 48vw, 205px);
+  }
+  .hero-coordinate { top: 5px; right: 0; }
+  .object-caption { right: 0; bottom: -6px; }
+  .hero-index { left: 22px; }
+}

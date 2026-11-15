@@ -275,6 +275,25 @@ function Hero() {
   )
 }
 
+function ExpertiseRibbon() {
+  const items = [...profile.roles, ...profile.roles]
+
+  return (
+    <div className="expertise-ribbon" role="group" aria-label={`Areas of interest: ${profile.roles.join(', ')}`}>
+      <span className="ribbon-label">AREAS OF INTEREST <span>↘</span></span>
+      <div className="ribbon-track" aria-hidden="true">
+        <div className="ribbon-content">
+          {items.map((role, index) => (
+            <span className="ribbon-item" key={`${role}-${index}`}>
+              <span className="ribbon-star">✳</span>{role}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function SectionHeading({ index, title, lead }: { index: string; title: string; lead: string }) {
   return (
     <motion.div className="section-heading" variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }}>
@@ -1010,6 +1029,7 @@ export default function App() {
             <PullCord dark={dark} onToggle={toggleTheme} />
             <main>
               <Hero />
+              <ExpertiseRibbon />
               <AnimatePresence mode="wait">
                 {activeDoor ? (
                   <Room key={activeDoor} doorId={activeDoor} onClose={() => setActiveDoor(null)} scrollToRoom={scrollToRoom} />

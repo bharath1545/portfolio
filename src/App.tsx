@@ -347,13 +347,30 @@ function ProjectCard({ project, index, accent }: { project: Project; index: numb
   )
 }
 
-function Room({ doorId, onClose }: { doorId: string; onClose: () => void }) {
+function Room({
+  doorId,
+  onClose,
+  scrollToRoom,
+}: {
+  doorId: string
+  onClose: () => void
+  scrollToRoom: (element: HTMLElement) => void
+}) {
   const reduced = useReducedMotion()
   const door = doors.find((item) => item.id === doorId)
   const roomProjects = projects.filter((project) => project.room === doorId)
   const roomCertifications = door?.certifications
     ? certifications.filter((certification) => door.certifications?.includes(certification.name))
     : []
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const room = document.querySelector<HTMLElement>('.room-view')
+      if (room) scrollToRoom(room)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [doorId, scrollToRoom])
+
   if (!door) return null
 
   return (
@@ -705,37 +722,70 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [activeDoor, setActiveDoor] = useState<string | null>(null)
   const [dark, setDark] = useState(false)
+  const activeDoorRef = useRef(activeDoor)
+  const lenisRef = useRef<Lenis | null>(null)
+  activeDoorRef.current = activeDoor
   const onLoaderComplete = useCallback(() => setLoading(false), [])
   const reduced = useReducedMotion()
 
   const toggleTheme = useCallback(() => setDark((value) => !value), [])
 
   useEffect(() => {
-    if (reduced) return
-    const lenis = new Lenis({ duration: 1.05, smoothWheel: true })
-    let frame = 0
+    if (loading) return
+    const lenis = reduced ? null : new Lenis({ duration: 1.05, smoothWheel: true })
+    lenisRef.current = lenis
+    let lenisFrame = 0
+    let navigationFrame = 0
     const tick = (time: number) => {
-      lenis.raf(time)
-      frame = window.requestAnimationFrame(tick)
+      lenis?.raf(time)
+      if (lenis) lenisFrame = window.requestAnimationFrame(tick)
     }
-    frame = window.requestAnimationFrame(tick)
-    const anchors = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]'))
-    const listeners = anchors.map((anchor) => {
-      const handleClick = (event: MouseEvent) => {
-        const id = anchor.getAttribute('href')?.slice(1)
-        const target = id ? document.getElementById(id) : null
-        if (!target) return
+    if (lenis) lenisFrame = window.requestAnimationFrame(tick)
+    const handleAnchorClick = (event: MouseEvent) => {
+      if (!(event.target instanceof Element)) return
+      const anchor = event.target.closest<HTMLAnchorElement>('a[href^="#"]')
+      if (!anchor) return
+      const id = anchor.getAttribute('href')?.slice(1)
+      const target = id ? document.getElementById(id) : null
+      if (id === 'doors' && activeDoorRef.current) {
         event.preventDefault()
-        lenis.scrollTo(target, { offset: -82 })
-        window.history.replaceState(null, '', `#${id}`)
+        setActiveDoor(null)
+        let attempts = 0
+        const scrollWhenMounted = () => {
+          const wall = document.getElementById('doors')
+          if (wall) {
+            wall.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+            window.history.replaceState(null, '', '#doors')
+            return
+          }
+          if (attempts < 60) {
+            attempts += 1
+            navigationFrame = window.requestAnimationFrame(scrollWhenMounted)
+          }
+        }
+        navigationFrame = window.requestAnimationFrame(scrollWhenMounted)
+        return
       }
-      anchor.addEventListener('click', handleClick)
-      return { anchor, handleClick }
-    })
+      if (!target || reduced || !lenis) return
+      event.preventDefault()
+      lenis.scrollTo(target, { offset: 0 })
+      window.history.replaceState(null, '', `#${id}`)
+    }
+    document.addEventListener('click', handleAnchorClick)
     return () => {
-      window.cancelAnimationFrame(frame)
-      listeners.forEach(({ anchor, handleClick }) => anchor.removeEventListener('click', handleClick))
-      lenis.destroy()
+      window.cancelAnimationFrame(lenisFrame)
+      window.cancelAnimationFrame(navigationFrame)
+      document.removeEventListener('click', handleAnchorClick)
+      lenis?.destroy()
+      lenisRef.current = null
+    }
+  }, [loading, reduced, setActiveDoor])
+
+  const scrollToRoom = useCallback((element: HTMLElement) => {
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(element, { offset: 0 })
+    } else {
+      element.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
     }
   }, [reduced])
 
@@ -757,7 +807,7 @@ export default function App() {
               <Hero />
               <AnimatePresence mode="wait">
                 {activeDoor ? (
-                  <Room key={activeDoor} doorId={activeDoor} onClose={() => setActiveDoor(null)} />
+                  <Room key={activeDoor} doorId={activeDoor} onClose={() => setActiveDoor(null)} scrollToRoom={scrollToRoom} />
                 ) : (
                   <DoorWall key="wall" onOpen={setActiveDoor} />
                 )}

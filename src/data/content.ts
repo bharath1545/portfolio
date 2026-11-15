@@ -7,7 +7,7 @@ export const profile = {
   github: 'https://github.com/bharath1545',
   githubUser: 'bharath1545',
   resume: '/resume.pdf',
-  portrait: null as string | null,
+  portrait: '/me.jpeg' as string | null,
   positioning:
     'Aspiring VLSI and Semiconductor Engineer | Electronics and Communication Engineering | Embedded Systems Developer',
   summary:

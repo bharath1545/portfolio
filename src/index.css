@@ -522,3 +522,59 @@ a { color: inherit; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+body { font-size: 16px; }
+main > section[id], footer[id], .room-view { scroll-margin-top: 88px; }
+.header-brand { font-size: 12px; }
+.desktop-nav a { font-size: 14px; }
+.theme-button, .resume-link, .mobile-menu-toggle { font-size: 13px; }
+.mobile-nav a { font-size: 15px; }
+.hero-position { font-size: clamp(15px, 1.35vw, 18px); }
+.hero-cta { font-size: 13px; }
+.hero-bottom > p { font-size: 13px; }
+.section-heading > p, .room-heading > p { font-size: 16px; }
+.door-title { font-size: 20px; }
+.door-description { font-size: 13px; }
+.room-project-copy > p, .room-cert-row p, .room-internship p, .story-chapter p, .story-undated article p, .tool-detail > p { font-size: 15px; }
+.project-tags span, .room-skill-row > div span, .room-empty-note > div span { font-size: 11px; }
+.room-back { font-size: 10px; }
+.chapter-date, .chapter-foot, .story-undated article > span, .story-undated > span { font-size: 10px; }
+.tool-key { font-size: 12px; }
+.tool-search input { font-size: 13px; }
+.education-item h3 { font-size: clamp(18px, 2vw, 22px); }
+.education-item p { font-size: 14px; }
+.education-score strong { font-size: 14px; }
+.education-score span, .cert-index, .cert-issuer, .cert-flip-hint, .elite-badge, .cert-back > span:first-child { font-size: 10px; }
+.cert-front > strong { font-size: 18px; }
+.cert-back > p { font-size: 14px; }
+.closing-summary { font-size: 15px; }
+.contact-details { font-size: 13px; }
+.closing-resume { font-size: 12px; }
+.contact-form label { font-size: 13px; }
+.contact-form input, .contact-form textarea { font-size: 14px; }
+.eyebrow, .section-index, .hero-coordinate, .object-caption, .hero-index, .calendar-label, .calendar-page-number, .door-topline, .door-open-cue, .wall-controls, .wall-hint, .project-card-meta, .device-caption, .slot-path, .project-kicker, .room-stack-label, .room-skill-row > span, .room-cert-row > span, .room-internship > span, .number-label, .number-detail, .story-odometer > span, .story-odometer > small, .toolbox-device-top, .toolbox-status, .tool-detail > span, .tool-detail-hint, .education-index, .certifications-heading > div > span, .closing-section .section-index, .contact-form > span, .contact-form small, .footer-bottom, .portrait-placeholder > span, .portrait-placeholder small, .portrait-caption {
+  font-size: 10px;
+}
+
+@media (max-width: 680px) {
+  .header-brand { font-size: 10px; }
+  .theme-button, .resume-link, .mobile-menu-toggle { font-size: 12px; }
+  .hero-position { font-size: 15px; }
+  .hero-cta { font-size: 12px; }
+  .hero-bottom > p { font-size: 12px; }
+  .section-heading > p, .room-heading > p { font-size: 15px; }
+  .door-description { font-size: 12px; }
+  .room-project-copy > p, .room-cert-row p, .room-internship p, .story-chapter p, .story-undated article p, .tool-detail > p { font-size: 14px; }
+  .tool-key { font-size: 10px; }
+  .education-item h3 { font-size: 17px; }
+  .education-item p { font-size: 13px; }
+  .education-score strong { font-size: 12px; }
+  .cert-front > strong { font-size: 15px; }
+  .cert-back > p { font-size: 12px; }
+  .closing-summary { font-size: 14px; }
+  .contact-details { font-size: 12px; }
+  .contact-form label { font-size: 12px; }
+  .eyebrow, .section-index, .hero-coordinate, .object-caption, .hero-index, .calendar-label, .calendar-page-number, .door-topline, .door-open-cue, .wall-controls, .wall-hint, .project-card-meta, .device-caption, .slot-path, .project-kicker, .room-stack-label, .room-skill-row > span, .room-cert-row > span, .room-internship > span, .number-label, .number-detail, .story-odometer > span, .story-odometer > small, .toolbox-device-top, .toolbox-status, .tool-detail > span, .tool-detail-hint, .education-index, .certifications-heading > div > span, .closing-section .section-index, .contact-form > span, .contact-form small, .footer-bottom, .portrait-placeholder > span, .portrait-placeholder small, .portrait-caption {
+    font-size: 9px;
+  }
+}

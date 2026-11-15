@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties, FormEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent } from 'react'
+import type {
+  CSSProperties,
+  FormEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent,
+} from 'react'
 import Lenis from 'lenis'
 import { AnimatePresence, motion, MotionConfig, useReducedMotion } from 'framer-motion'
 import {
@@ -67,6 +73,7 @@ function useLocalTime() {
 
 function Header({ onThemeToggle }: { onThemeToggle: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [activeSection, setActiveSection] = useState('doors')
   const time = useLocalTime()
   const links = [
     ['Work', '#doors'],
@@ -74,6 +81,26 @@ function Header({ onThemeToggle }: { onThemeToggle: () => void }) {
     ['Skills', '#toolbox'],
     ['Contact', '#contact'],
   ]
+
+  useEffect(() => {
+    const sectionIds = ['doors', 'story', 'toolbox', 'contact']
+    const sections = sectionIds
+      .map((id) => document.getElementById(id))
+      .filter((section): section is HTMLElement => section !== null)
+    if (!sections.length) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const current = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
+        if (current) setActiveSection(current.target.id)
+      },
+      { rootMargin: '-18% 0px -65% 0px', threshold: [0, 0.1, 0.25, 0.5] },
+    )
+    sections.forEach((section) => observer.observe(section))
+    return () => observer.disconnect()
+  }, [])
 
   return (
     <header className="site-header">
@@ -83,7 +110,14 @@ function Header({ onThemeToggle }: { onThemeToggle: () => void }) {
       </a>
       <nav className="desktop-nav" aria-label="Main navigation">
         {links.map(([label, href]) => (
-          <a key={href} href={href}>{label}</a>
+          <a
+            key={href}
+            href={href}
+            className={href === `#${activeSection}` ? 'nav-active' : ''}
+            aria-current={href === `#${activeSection}` ? 'location' : undefined}
+          >
+            {label}
+          </a>
         ))}
       </nav>
       <div className="header-actions">
@@ -278,6 +312,7 @@ function DoorCard({ door, index, onOpen }: { door: Door; index: number; onOpen: 
       viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 0.62, delay: reduced ? 0 : index * 0.09, ease: [0.2, 0.7, 0.2, 1] }}
       aria-label={`Open ${door.title} room`}
+      aria-keyshortcuts={`${index + 1}`}
     >
       <span className="door-topline"><span>ROOM {door.number}</span><ArrowUpRight size={15} /></span>
       <span className="door-architecture">
@@ -310,8 +345,38 @@ function DoorCard({ door, index, onOpen }: { door: Door; index: number; onOpen: 
 
 function DoorWall({ onOpen }: { onOpen: (id: string) => void }) {
   const wallRef = useRef<HTMLDivElement>(null)
+  const drag = useRef({ active: false, startX: 0, scrollLeft: 0, moved: false })
 
   const scrollWall = (direction: number) => wallRef.current?.scrollBy({ left: direction * 320, behavior: 'smooth' })
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || event.button !== 0) return
+    drag.current = {
+      active: true,
+      startX: event.clientX,
+      scrollLeft: event.currentTarget.scrollLeft,
+      moved: false,
+    }
+  }
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!drag.current.active) return
+    if (!(event.buttons & 1)) {
+      drag.current.active = false
+      return
+    }
+    const distance = event.clientX - drag.current.startX
+    if (Math.abs(distance) > 5) drag.current.moved = true
+    if (drag.current.moved) event.currentTarget.scrollLeft = drag.current.scrollLeft - distance
+  }
+  const handlePointerUp = () => {
+    drag.current.active = false
+  }
+  const handleClickCapture = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!drag.current.moved) return
+    event.preventDefault()
+    event.stopPropagation()
+    drag.current.moved = false
+  }
 
   const handleKeys = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
@@ -325,26 +390,53 @@ function DoorWall({ onOpen }: { onOpen: (id: string) => void }) {
       <div className="doors-intro">
         <SectionHeading index="01" title="The wall of doors" lead="Each room opens onto a different part of my work. Pick a door and step inside." />
         <div className="wall-controls">
-          <span>DRAG OR USE ARROW KEYS</span>
+          <span>DRAG · ARROWS · KEYS 1–4</span>
           <button type="button" aria-label="Scroll doors left" onClick={() => scrollWall(-1)}><ArrowLeft size={17} /></button>
           <button type="button" aria-label="Scroll doors right" onClick={() => scrollWall(1)}><ArrowRight size={17} /></button>
         </div>
       </div>
       <div className="door-wall-wrap">
-        <div className="door-wall" ref={wallRef} tabIndex={0} aria-label="Explore the four portfolio rooms" onKeyDown={handleKeys}>
+        <div
+          className="door-wall"
+          ref={wallRef}
+          tabIndex={0}
+          aria-label="Explore the four portfolio rooms"
+          onKeyDown={handleKeys}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+          onClickCapture={handleClickCapture}
+        >
           {doors.map((door, index) => <DoorCard key={door.id} door={door} index={index} onOpen={() => onOpen(door.id)} />)}
         </div>
         <div className="wall-floor" aria-hidden="true" />
       </div>
-      <p className="wall-hint">HOVER TO TAKE A LOOK <span>·</span> CLICK TO ENTER</p>
+      <p className="wall-hint">HOVER TO TAKE A LOOK <span>·</span> CLICK OR PRESS 1–4 TO ENTER</p>
     </section>
   )
 }
 
 function SchematicPlaceholder({ project }: { project: Project }) {
+  const reduced = useReducedMotion()
+  const movePreview = (event: PointerEvent<HTMLDivElement>) => {
+    if (reduced || event.pointerType === 'touch') return
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const x = (event.clientX - bounds.left) / bounds.width
+    const y = (event.clientY - bounds.top) / bounds.height
+    event.currentTarget.style.setProperty('--preview-x', `${x * 100}%`)
+    event.currentTarget.style.setProperty('--preview-y', `${y * 100}%`)
+    event.currentTarget.style.setProperty('--preview-rotate-x', `${(0.5 - y) * 5}deg`)
+    event.currentTarget.style.setProperty('--preview-rotate-y', `${(x - 0.5) * 7}deg`)
+  }
+  const resetPreview = (event: PointerEvent<HTMLDivElement>) => {
+    event.currentTarget.style.setProperty('--preview-rotate-x', '0deg')
+    event.currentTarget.style.setProperty('--preview-rotate-y', '0deg')
+  }
+
   return (
     <div className="device-stage" role="img" aria-label={`Replaceable project image slot for ${project.title}. Add public/projects/${project.slug}.jpg.`}>
-      <div className="device-monitor">
+      <div className="device-monitor" onPointerMove={movePreview} onPointerLeave={resetPreview}>
         <div className="device-screen">
           <svg className="schematic" viewBox="0 0 360 200" fill="none" aria-hidden="true">
             <path d="M25 42H110V82H168M168 82V42H276M168 82V145H315M55 150H110V115H168" />
@@ -873,6 +965,26 @@ export default function App() {
       lenisRef.current = null
     }
   }, [loading, reduced, setActiveDoor])
+
+  useEffect(() => {
+    const handleRoomShortcuts = (event: globalThis.KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.repeat) return
+      const target = event.target
+      if (target instanceof HTMLElement && target.matches('input, textarea, select, [contenteditable="true"]')) return
+
+      if (event.key === 'Escape' && activeDoorRef.current) {
+        event.preventDefault()
+        setActiveDoor(null)
+        return
+      }
+
+      if (activeDoorRef.current || !['1', '2', '3', '4'].includes(event.key)) return
+      setActiveDoor(doors[Number(event.key) - 1].id)
+    }
+
+    window.addEventListener('keydown', handleRoomShortcuts)
+    return () => window.removeEventListener('keydown', handleRoomShortcuts)
+  }, [setActiveDoor])
 
   const scrollToRoom = useCallback((element: HTMLElement) => {
     if (lenisRef.current) {

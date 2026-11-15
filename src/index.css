@@ -103,6 +103,10 @@ a { color: inherit; text-decoration: none; }
 .desktop-nav { display: flex; align-items: center; gap: clamp(14px, 2.5vw, 34px); }
 .desktop-nav a { color: var(--muted); font-size: 12px; transition: color .2s ease; }
 .desktop-nav a:hover, .mobile-nav a:hover { color: var(--ink); }
+.desktop-nav a { position: relative; padding: 8px 0; }
+.desktop-nav a::after { position: absolute; right: 0; bottom: 1px; left: 0; height: 2px; border-radius: 2px; background: #cf593e; content: ''; transform: scaleX(0); transform-origin: left; transition: transform .24s ease; }
+.desktop-nav a:hover::after, .desktop-nav a.nav-active::after { transform: scaleX(1); }
+.desktop-nav a.nav-active { color: var(--ink); }
 .header-actions { display: flex; align-items: center; gap: 9px; }
 .ist-clock { display: flex; align-items: center; gap: 7px; padding: 0 8px; color: var(--muted); font: 9px var(--mono); white-space: nowrap; }
 .live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #43826b; box-shadow: 0 0 0 3px rgba(67,130,107,.13); }
@@ -190,7 +194,9 @@ a { color: inherit; text-decoration: none; }
 .wall-controls button { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: transparent; cursor: pointer; transition: color .2s ease, background .2s ease; }
 .wall-controls button:hover { color: var(--paper); background: var(--ink); }
 .door-wall-wrap { position: relative; margin-top: 64px; }
-.door-wall { position: relative; z-index: 1; display: flex; gap: clamp(14px, 2vw, 26px); overflow-x: auto; padding: 16px 3px 34px; scrollbar-width: none; scroll-snap-type: x mandatory; }
+.door-wall { position: relative; z-index: 1; display: flex; gap: clamp(14px, 2vw, 26px); overflow-x: auto; padding: 16px 3px 34px; scrollbar-width: none; scroll-snap-type: x mandatory; cursor: grab; user-select: none; }
+.door-wall:active { cursor: grabbing; }
+.door-wall button { user-select: none; }
 .door-wall::-webkit-scrollbar { display: none; }
 .door-card { --door-color: #cf593e; position: relative; display: flex; flex: 1 0 220px; min-width: 0; flex-direction: column; align-items: stretch; padding: 12px 12px 0; overflow: hidden; border: 1px solid var(--soft-line); border-radius: 3px; background: color-mix(in srgb, var(--paper) 62%, transparent); text-align: left; cursor: pointer; scroll-snap-align: center; isolation: isolate; }
 .door-card { transform-style: preserve-3d; }
@@ -235,7 +241,10 @@ a { color: inherit; text-decoration: none; }
 .project-card-meta { position: absolute; top: 18px; right: 20px; left: 20px; display: flex; justify-content: space-between; color: var(--muted); font-size: 8px; }
 .device-stage { display: flex; min-height: 240px; flex-direction: column; align-items: center; justify-content: center; padding-top: 8px; }
 .device-monitor { position: relative; width: min(100%, 370px); }
-.device-screen { position: relative; aspect-ratio: 16 / 10; overflow: hidden; border: 8px solid #282924; border-radius: 8px; background: #eeece5; box-shadow: 0 14px 28px rgba(34,32,28,.15); }
+.device-screen { position: relative; aspect-ratio: 16 / 10; overflow: hidden; border: 8px solid #282924; border-radius: 8px; background: #eeece5; box-shadow: 0 14px 28px rgba(34,32,28,.15); transition: transform .16s ease-out, box-shadow .22s ease; transform: perspective(900px) rotateX(var(--preview-rotate-x, 0deg)) rotateY(var(--preview-rotate-y, 0deg)); transform-style: preserve-3d; }
+.device-screen::after { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(240px circle at var(--preview-x, 50%) var(--preview-y, 50%), rgba(255,255,255,.55), transparent 70%); content: ''; opacity: 0; transition: opacity .2s ease; }
+.device-monitor:hover .device-screen { box-shadow: 0 20px 34px rgba(34,32,28,.2); }
+.device-monitor:hover .device-screen::after { opacity: 1; }
 .dark .device-screen { border-color: #34352f; }
 .schematic { width: 100%; height: 100%; padding: 10px; }
 .schematic path { stroke: #77766f; stroke-width: 1.5; stroke-dasharray: 4 5; }

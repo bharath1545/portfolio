@@ -14,9 +14,11 @@ import {
   ArrowRight,
   ArrowUp,
   ArrowUpRight,
+  Activity,
   Award,
   Check,
   ChevronDown,
+  Cpu,
   DoorOpen,
   Download,
   Github,
@@ -26,8 +28,10 @@ import {
   Menu,
   Moon,
   Phone,
+  Search,
   Sun,
   X,
+  Zap,
 } from 'lucide-react'
 import {
   awards,
@@ -71,7 +75,7 @@ function useLocalTime() {
   return time
 }
 
-function Header({ onThemeToggle }: { onThemeToggle: () => void }) {
+function Header({ onThemeToggle, onCommandOpen }: { onThemeToggle: () => void; onCommandOpen: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [activeSection, setActiveSection] = useState('doors')
   const time = useLocalTime()
@@ -122,6 +126,9 @@ function Header({ onThemeToggle }: { onThemeToggle: () => void }) {
       </nav>
       <div className="header-actions">
         <span className="ist-clock"><span className="live-dot" /> {time || '--:--'} IST</span>
+        <button className="command-trigger" type="button" aria-label="Open quick navigation" aria-keyshortcuts="Control+K Meta+K" onClick={onCommandOpen}>
+          <Search size={14} /><span>Explore</span><kbd>CTRL K</kbd>
+        </button>
         <button className="theme-button" type="button" aria-label="Change theme" onClick={onThemeToggle}>
           <span className="theme-glyph"><Sun size={15} /><Moon size={14} /></span>
           <span>Lights</span>
@@ -158,6 +165,172 @@ function Header({ onThemeToggle }: { onThemeToggle: () => void }) {
         )}
       </AnimatePresence>
     </header>
+  )
+}
+
+type PaletteEntry = {
+  id: string
+  label: string
+  detail: string
+  group: string
+  kind: 'navigate' | 'room' | 'theme' | 'resume'
+  target?: string
+}
+
+function CommandPalette({
+  onClose,
+  onOpenRoom,
+  onToggleTheme,
+}: {
+  onClose: () => void
+  onOpenRoom: (id: string) => void
+  onToggleTheme: () => void
+}) {
+  const [query, setQuery] = useState('')
+  const [activeIndex, setActiveIndex] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const resultRefs = useRef<Array<HTMLAnchorElement | HTMLButtonElement | null>>([])
+  const reduced = useReducedMotion()
+  const entries: PaletteEntry[] = [
+    { id: 'signal', label: 'Signal Lab', detail: '3D circuit and signal controls', group: 'JUMP TO', kind: 'navigate', target: 'signal-lab' },
+    { id: 'work', label: 'Work and projects', detail: 'Explore the four project rooms', group: 'JUMP TO', kind: 'navigate', target: 'doors' },
+    { id: 'story', label: 'The story so far', detail: 'Education, internship, and awards', group: 'JUMP TO', kind: 'navigate', target: 'story' },
+    { id: 'toolbox', label: 'The toolbox', detail: 'Search skills and technologies', group: 'JUMP TO', kind: 'navigate', target: 'toolbox' },
+    { id: 'learning', label: 'Learning in progress', detail: 'Education and certifications', group: 'JUMP TO', kind: 'navigate', target: 'learning' },
+    { id: 'contact', label: 'Say hello', detail: 'Contact details and message form', group: 'JUMP TO', kind: 'navigate', target: 'contact' },
+    ...doors.map((door) => ({
+      id: door.id,
+      label: door.title,
+      detail: `Open room ${door.number}`,
+      group: 'OPEN A ROOM',
+      kind: 'room' as const,
+      target: door.id,
+    })),
+    { id: 'theme', label: 'Toggle appearance', detail: 'Switch between light and dark', group: 'ACTIONS', kind: 'theme' },
+    { id: 'resume', label: 'Download resume', detail: 'Save Bharath_Bhat_Resume.pdf', group: 'ACTIONS', kind: 'resume' },
+  ]
+  const normalizedQuery = query.trim().toLowerCase()
+  const filtered = entries.filter((entry) =>
+    `${entry.label} ${entry.detail} ${entry.group}`.toLowerCase().includes(normalizedQuery),
+  )
+
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    inputRef.current?.focus()
+    return () => previousFocus?.focus()
+  }, [])
+
+  useEffect(() => setActiveIndex(0), [query])
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      if (filtered.length) {
+        setActiveIndex((index) => (index + (event.key === 'ArrowDown' ? 1 : -1) + filtered.length) % filtered.length)
+      }
+    } else if (event.key === 'Enter' && filtered[activeIndex]) {
+      event.preventDefault()
+      resultRefs.current[activeIndex]?.click()
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      event.stopPropagation()
+      onClose()
+    }
+  }
+
+  return (
+    <motion.div
+      className="command-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <motion.div
+        className="command-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="command-title"
+        initial={reduced ? false : { opacity: 0, y: -16, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={reduced ? undefined : { opacity: 0, y: -8, scale: 0.99 }}
+        transition={{ duration: reduced ? 0 : 0.2 }}
+      >
+        <div className="command-heading">
+          <span id="command-title">QUICK NAVIGATION</span>
+          <button type="button" aria-label="Close quick navigation" onClick={onClose}>ESC</button>
+        </div>
+        <label className="command-search">
+          <Search size={18} />
+          <span className="sr-only">Search pages, rooms, and actions</span>
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Where do you want to go?"
+            aria-controls="command-results"
+            aria-activedescendant={filtered[activeIndex] ? `command-result-${filtered[activeIndex].id}` : undefined}
+          />
+          <kbd>ESC</kbd>
+        </label>
+        <div className="command-results" id="command-results" role="listbox" aria-label="Quick navigation results">
+          {filtered.map((entry, index) => {
+            const resultClass = `command-result ${index === activeIndex ? 'command-result-active' : ''}`
+            const resultContent = (
+              <>
+                <span className="command-result-mark" aria-hidden="true">
+                  {entry.kind === 'room' ? '0' + (doors.findIndex((door) => door.id === entry.target) + 1) : entry.kind === 'navigate' ? '↗' : '⌘'}
+                </span>
+                <span className="command-result-copy"><strong>{entry.label}</strong><small>{entry.detail}</small></span>
+                <span className="command-result-group">{entry.group}</span>
+              </>
+            )
+            if (entry.kind === 'navigate' || entry.kind === 'resume') {
+              return (
+                <a
+                  key={entry.id}
+                  id={`command-result-${entry.id}`}
+                  ref={(element) => { resultRefs.current[index] = element }}
+                  className={resultClass}
+                  href={entry.kind === 'resume' ? profile.resume : `#${entry.target}`}
+                  download={entry.kind === 'resume' ? 'Bharath_Bhat_Resume.pdf' : undefined}
+                  role="option"
+                  aria-selected={index === activeIndex}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={onClose}
+                >
+                  {resultContent}
+                </a>
+              )
+            }
+            return (
+              <button
+                key={entry.id}
+                id={`command-result-${entry.id}`}
+                ref={(element) => { resultRefs.current[index] = element }}
+                className={resultClass}
+                type="button"
+                role="option"
+                aria-selected={index === activeIndex}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => {
+                  if (entry.kind === 'room' && entry.target) onOpenRoom(entry.target)
+                  if (entry.kind === 'theme') onToggleTheme()
+                  onClose()
+                }}
+              >
+                {resultContent}
+              </button>
+            )
+          })}
+          {filtered.length === 0 && <p className="command-empty">No matches. Try a room, skill, or section.</p>}
+        </div>
+        <div className="command-footer"><span><kbd>↑</kbd><kbd>↓</kbd> TO NAVIGATE</span><span><kbd>↵</kbd> TO SELECT</span><span>ESC TO CLOSE</span></div>
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -291,6 +464,118 @@ function ExpertiseRibbon() {
         </div>
       </div>
     </div>
+  )
+}
+
+const signalModes = [
+  { name: 'CLOCK', value: '01.2 MHz', detail: 'A steady clock through the core.' },
+  { name: 'DATA', value: '1010 1101', detail: 'A data packet moving across the bus.' },
+  { name: 'RESET', value: 'READY', detail: 'The system is ready for another cycle.' },
+]
+
+function SignalLab() {
+  const [mode, setMode] = useState(signalModes[0])
+  const [pulseCount, setPulseCount] = useState(0)
+  const [running, setRunning] = useState(false)
+  const pulseTimer = useRef<number | undefined>(undefined)
+  const reduced = useReducedMotion()
+
+  useEffect(() => () => window.clearTimeout(pulseTimer.current), [])
+
+  const tiltStage = (event: PointerEvent<HTMLDivElement>) => {
+    if (reduced || event.pointerType === 'touch') return
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const x = (event.clientX - bounds.left) / bounds.width
+    const y = (event.clientY - bounds.top) / bounds.height
+    event.currentTarget.style.setProperty('--stage-tilt-x', `${(0.5 - y) * 8}deg`)
+    event.currentTarget.style.setProperty('--stage-tilt-y', `${(x - 0.5) * 10}deg`)
+  }
+
+  const resetStage = (event: PointerEvent<HTMLDivElement>) => {
+    event.currentTarget.style.setProperty('--stage-tilt-x', '0deg')
+    event.currentTarget.style.setProperty('--stage-tilt-y', '0deg')
+  }
+
+  const sendPulse = () => {
+    window.clearTimeout(pulseTimer.current)
+    setPulseCount((count) => count + 1)
+    setRunning(true)
+    pulseTimer.current = window.setTimeout(() => setRunning(false), 1600)
+  }
+
+  return (
+    <motion.section
+      id="signal-lab"
+      className="signal-lab"
+      aria-labelledby="signal-lab-title"
+      initial={reduced ? false : { opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.18 }}
+      transition={{ duration: 0.65 }}
+    >
+      <div className="signal-copy">
+        <span className="signal-kicker"><span /> INTERACTIVE STUDY / 01</span>
+        <h2 id="signal-lab-title">A little signal.<br /><em>A lot in motion.</em></h2>
+        <p>Turn the chip, choose a signal, and send a pulse through this tiny 3D circuit study.</p>
+        <div className="signal-modes" role="group" aria-label="Choose a signal type">
+          {signalModes.map((item) => (
+            <button
+              type="button"
+              key={item.name}
+              className={mode.name === item.name ? 'signal-mode signal-mode-active' : 'signal-mode'}
+              aria-pressed={mode.name === item.name}
+              onClick={() => {
+                setMode(item)
+                setRunning(false)
+                window.clearTimeout(pulseTimer.current)
+              }}
+            >
+              {item.name}
+            </button>
+          ))}
+        </div>
+        <button className="signal-trigger" type="button" onClick={sendPulse}>
+          <Zap size={15} /> SEND A PULSE <span>↗</span>
+        </button>
+        <div className="signal-readout" aria-live="polite">
+          <Activity size={15} />
+          <span>
+            <strong>{running ? 'SIGNAL IN TRANSIT' : mode.value}</strong>
+            <small>{running ? `${mode.name} · PULSE ${String(pulseCount).padStart(2, '0')}` : mode.detail}</small>
+          </span>
+        </div>
+      </div>
+      <div
+        className={`signal-stage ${running ? 'signal-stage-active' : ''}`}
+        onPointerMove={tiltStage}
+        onPointerLeave={resetStage}
+        role="img"
+        aria-label={`Interactive three-dimensional circuit illustration. ${mode.name} signal mode selected.`}
+      >
+        <div className="signal-stage-grid" aria-hidden="true" />
+        <div className="signal-orbit signal-orbit-one" aria-hidden="true"><i /></div>
+        <div className="signal-orbit signal-orbit-two" aria-hidden="true"><i /></div>
+        <svg className="signal-traces" viewBox="0 0 480 390" fill="none" aria-hidden="true">
+          <path d="M25 181h90l32 32h58m160-32h90l-32 32h-58M90 73v58l38 38m224-96v58l-38 38M93 305v-57l35-35m224 92v-57l-38-35" />
+          <path d="M26 181h90l32 32h58m160-32h90l-32 32h-58M90 73v58l38 38m224-96v58l-38 38M93 305v-57l35-35m224 92v-57l-38-35" className="signal-current" />
+          <circle cx="25" cy="181" r="4" /><circle cx="455" cy="181" r="4" /><circle cx="90" cy="73" r="4" /><circle cx="390" cy="73" r="4" /><circle cx="93" cy="305" r="4" /><circle cx="387" cy="305" r="4" />
+        </svg>
+        <div className="signal-chip-wrap">
+          <div className="signal-chip-shadow" />
+          <div className="signal-chip">
+            <div className="signal-chip-top">
+              <span className="chip-emblem"><Cpu size={24} /></span>
+              <span>BB / 01</span>
+              <strong>CORE</strong>
+              <small>ECE · SYSTEMS</small>
+            </div>
+          </div>
+        </div>
+        <span className="signal-stage-label signal-label-left">INPUT <i>03.3V</i></span>
+        <span className="signal-stage-label signal-label-right">OUTPUT <i>{running ? 'ACTIVE' : 'READY'}</i></span>
+        <span className="signal-stage-index">FIG 01 — SIGNAL PATH</span>
+      </div>
+    </motion.section>
   )
 }
 
@@ -818,7 +1103,7 @@ function CertificationCard({ certification, index }: { certification: (typeof ce
 
 function Learning() {
   return (
-    <section className="learning-section">
+    <section id="learning" className="learning-section">
       <div className="learning-heading">
         <SectionHeading index="04" title="Learning in progress" lead="Education and certifications, as listed in my resume." />
       </div>
@@ -926,6 +1211,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [activeDoor, setActiveDoor] = useState<string | null>(null)
   const [dark, setDark] = useState(false)
+  const [commandOpen, setCommandOpen] = useState(false)
   const activeDoorRef = useRef(activeDoor)
   const lenisRef = useRef<Lenis | null>(null)
   activeDoorRef.current = activeDoor
@@ -933,6 +1219,18 @@ export default function App() {
   const reduced = useReducedMotion()
 
   const toggleTheme = useCallback(() => setDark((value) => !value), [])
+  const openCommandPalette = useCallback(() => setCommandOpen(true), [])
+
+  useEffect(() => {
+    const handleCommandShortcut = (event: globalThis.KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setCommandOpen((open) => !open)
+      }
+    }
+    window.addEventListener('keydown', handleCommandShortcut)
+    return () => window.removeEventListener('keydown', handleCommandShortcut)
+  }, [])
 
   useEffect(() => {
     if (loading) return
@@ -1025,11 +1323,21 @@ export default function App() {
         <AnimatePresence>{loading && <IntroLoader onComplete={onLoaderComplete} />}</AnimatePresence>
         {!loading && (
           <>
-            <Header onThemeToggle={toggleTheme} />
+            <Header onThemeToggle={toggleTheme} onCommandOpen={openCommandPalette} />
             <PullCord dark={dark} onToggle={toggleTheme} />
+            <AnimatePresence>
+              {commandOpen && (
+                <CommandPalette
+                  onClose={() => setCommandOpen(false)}
+                  onOpenRoom={setActiveDoor}
+                  onToggleTheme={toggleTheme}
+                />
+              )}
+            </AnimatePresence>
             <main>
               <Hero />
               <ExpertiseRibbon />
+              <SignalLab />
               <AnimatePresence mode="wait">
                 {activeDoor ? (
                   <Room key={activeDoor} doorId={activeDoor} onClose={() => setActiveDoor(null)} scrollToRoom={scrollToRoom} />

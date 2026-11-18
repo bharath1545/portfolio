@@ -18,6 +18,7 @@ import {
   Award,
   Check,
   ChevronDown,
+  Copy,
   Cpu,
   DoorOpen,
   Download,
@@ -75,7 +76,7 @@ function useLocalTime() {
   return time
 }
 
-function Header({ onThemeToggle, onCommandOpen }: { onThemeToggle: () => void; onCommandOpen: () => void }) {
+function Header({ dark, onThemeToggle, onCommandOpen }: { dark: boolean; onThemeToggle: () => void; onCommandOpen: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [activeSection, setActiveSection] = useState('doors')
   const time = useLocalTime()
@@ -129,9 +130,9 @@ function Header({ onThemeToggle, onCommandOpen }: { onThemeToggle: () => void; o
         <button className="command-trigger" type="button" aria-label="Open quick navigation" aria-keyshortcuts="Control+K Meta+K" onClick={onCommandOpen}>
           <Search size={14} /><span>Explore</span><kbd>CTRL K</kbd>
         </button>
-        <button className="theme-button" type="button" aria-label="Change theme" onClick={onThemeToggle}>
+        <button className="theme-button" type="button" aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'} aria-pressed={dark} onClick={onThemeToggle}>
           <span className="theme-glyph"><Sun size={15} /><Moon size={14} /></span>
-          <span>Lights</span>
+          <span>{dark ? 'Dark' : 'Light'}</span>
         </button>
         <a className="resume-link" href={profile.resume} download="Bharath_Bhat_Resume.pdf">
           <Download size={14} /> Resume
@@ -372,7 +373,7 @@ function Calendar() {
               {profile.roles[active]}
             </motion.strong>
           </div>
-          <span className="calendar-page-number">{String(active + 1).padStart(2, '0')} / 04</span>
+          <span className="calendar-page-number">{String(active + 1).padStart(2, '0')} / {String(profile.roles.length).padStart(2, '0')}</span>
         </motion.div>
       </AnimatePresence>
     </div>
@@ -382,10 +383,12 @@ function Calendar() {
 function Hero() {
   const heroRef = useRef<HTMLElement>(null)
   const pointerFrame = useRef(0)
+  const magneticFrame = useRef(0)
   const reduced = useReducedMotion()
 
   useEffect(() => () => {
     window.cancelAnimationFrame(pointerFrame.current)
+    window.cancelAnimationFrame(magneticFrame.current)
   }, [])
 
   const moveSpotlight = (event: PointerEvent<HTMLElement>) => {
@@ -412,23 +415,52 @@ function Hero() {
     heroRef.current?.style.setProperty('--object-y', '0px')
   }
 
+  const moveMagneticButton = (event: PointerEvent<HTMLAnchorElement>) => {
+    if (reduced || event.pointerType === 'touch' || magneticFrame.current) return
+    const button = event.currentTarget
+    const { clientX, clientY } = event
+    magneticFrame.current = window.requestAnimationFrame(() => {
+      magneticFrame.current = 0
+      const bounds = button.getBoundingClientRect()
+      button.style.setProperty('--magnet-x', `${(clientX - bounds.left - bounds.width / 2) * 0.12}px`)
+      button.style.setProperty('--magnet-y', `${(clientY - bounds.top - bounds.height / 2) * 0.12}px`)
+    })
+  }
+
+  const resetMagneticButton = (event: PointerEvent<HTMLAnchorElement>) => {
+    window.cancelAnimationFrame(magneticFrame.current)
+    magneticFrame.current = 0
+    event.currentTarget.style.setProperty('--magnet-x', '0px')
+    event.currentTarget.style.setProperty('--magnet-y', '0px')
+  }
+
   return (
     <section ref={heroRef} id="top" className="hero-section" onPointerMove={moveSpotlight} onPointerLeave={resetSpotlight}>
+      <svg className="hero-traces" viewBox="0 0 760 520" fill="none" aria-hidden="true">
+        <path d="M470 44h104v76h80v67h62M530 270h97v-54h89M463 468h92v-77h92v-54h78M714 120v35h48M583 391v-42h-63" />
+        <path d="M470 44h104v76h80v67h62M530 270h97v-54h89M463 468h92v-77h92v-54h78M714 120v35h48M583 391v-42h-63" className="hero-trace-pulse" />
+        <circle cx="470" cy="44" r="4" /><circle cx="716" cy="187" r="4" /><circle cx="716" cy="216" r="4" /><circle cx="725" cy="337" r="4" /><circle cx="463" cy="468" r="4" />
+      </svg>
       <div className="hero-grain" aria-hidden="true" />
       <div className="hero-copy">
         <motion.p className="eyebrow" initial="hidden" animate="visible" variants={reveal} transition={{ delay: 0.12, duration: 0.7 }}>
           ECE STUDENT <span className="eyebrow-divider">/</span> MANGALURU, INDIA
         </motion.p>
-        <motion.h1 initial="hidden" animate="visible" variants={reveal} transition={{ delay: 0.2, duration: 0.8 }}>
-          Bharath
+        <motion.h1 aria-label="Bharath Bhat" initial="hidden" animate="visible" variants={reveal} transition={{ delay: 0.2, duration: 0.8 }}>
+          <span className="hero-name-line" aria-hidden="true">{Array.from('Bharath').map((letter, index) => <span className="hero-glyph" style={{ '--letter-index': index } as CSSProperties} key={`${letter}-${index}`}>{letter}</span>)}</span>
           <br />
-          <span>Bhat<span className="hero-period">.</span></span>
+          <span className="hero-name-line" aria-hidden="true">{Array.from('Bhat').map((letter, index) => <span className="hero-glyph" style={{ '--letter-index': index + 7 } as CSSProperties} key={`${letter}-${index}`}>{letter}</span>)}<span className="hero-period">.</span></span>
         </motion.h1>
         <motion.p className="hero-position" initial="hidden" animate="visible" variants={reveal} transition={{ delay: 0.34, duration: 0.7 }}>
           {profile.positioning}
         </motion.p>
         <motion.div className="hero-bottom" initial="hidden" animate="visible" variants={reveal} transition={{ delay: 0.48, duration: 0.7 }}>
-          <a href="#doors" className="hero-cta">Walk through my work <ArrowDown size={15} /></a>
+          <a
+            href="#doors"
+            className="hero-cta"
+            onPointerMove={moveMagneticButton}
+            onPointerLeave={resetMagneticButton}
+          >Walk through my work <ArrowDown size={15} /></a>
           <p>One portfolio.<br />Four rooms to explore.</p>
         </motion.div>
       </div>
@@ -763,6 +795,9 @@ function SchematicPlaceholder({ project }: { project: Project }) {
 
 function ProjectCard({ project, index, accent }: { project: Project; index: number; accent: string }) {
   const reduced = useReducedMotion()
+  const pointerFrame = useRef(0)
+
+  useEffect(() => () => window.cancelAnimationFrame(pointerFrame.current), [])
 
   return (
     <motion.article
@@ -772,6 +807,27 @@ function ProjectCard({ project, index, accent }: { project: Project; index: numb
       whileInView={{ opacity: 1, filter: 'blur(0px)' }}
       viewport={{ once: true, amount: 0.18 }}
       transition={{ duration: 0.65, delay: reduced ? 0 : index * 0.08 }}
+      onPointerMove={(event) => {
+        if (reduced || event.pointerType === 'touch' || pointerFrame.current) return
+        const card = event.currentTarget
+        const { clientX, clientY } = event
+        pointerFrame.current = window.requestAnimationFrame(() => {
+          pointerFrame.current = 0
+          const bounds = card.getBoundingClientRect()
+          const x = (clientX - bounds.left) / bounds.width
+          const y = (clientY - bounds.top) / bounds.height
+          card.style.setProperty('--project-glow-x', `${x * 100}%`)
+          card.style.setProperty('--project-glow-y', `${y * 100}%`)
+          card.style.setProperty('--project-tilt-x', `${(0.5 - y) * 3}deg`)
+          card.style.setProperty('--project-tilt-y', `${(x - 0.5) * 4}deg`)
+        })
+      }}
+      onPointerLeave={(event) => {
+        window.cancelAnimationFrame(pointerFrame.current)
+        pointerFrame.current = 0
+        event.currentTarget.style.setProperty('--project-tilt-x', '0deg')
+        event.currentTarget.style.setProperty('--project-tilt-y', '0deg')
+      }}
     >
       <div className="project-card-meta"><span>PROJECT / {project.icon}</span><span>0{index + 1}</span></div>
       <SchematicPlaceholder project={project} />
@@ -780,6 +836,7 @@ function ProjectCard({ project, index, accent }: { project: Project; index: numb
         <h3>{project.title}</h3>
         <p>{project.description}</p>
         <div className="project-tags">{project.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
+        <span className="project-outcome"><strong>BUILD NOTE /</strong> {project.outcome}</span>
       </div>
     </motion.article>
   )
@@ -1129,6 +1186,16 @@ function Learning() {
 
 function ContactSection() {
   const reduced = useReducedMotion()
+  const [copyStatus, setCopyStatus] = useState('')
+
+  const copyEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(profile.email)
+      setCopyStatus('Email copied to clipboard.')
+    } catch {
+      setCopyStatus('Could not copy automatically. Use the email link above.')
+    }
+  }
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -1151,6 +1218,8 @@ function ContactSection() {
           <h2>Every good<br />build starts<br /><em>somewhere.</em></h2>
           <p className="closing-summary">{profile.summary}</p>
           <a href={`mailto:${profile.email}`} className="closing-email">{profile.email} <ArrowUpRight size={18} /></a>
+          <button className="copy-email" type="button" onClick={copyEmail}><Copy size={14} /> COPY EMAIL</button>
+          <span className="copy-email-status" aria-live="polite">{copyStatus}</span>
           <div className="contact-details">
             <span><MapPin size={14} /> {profile.location}</span>
             <a href={`tel:${profile.phone}`}><Phone size={14} /> {profile.phone}</a>
@@ -1210,7 +1279,12 @@ function BackToTop() {
 export default function App() {
   const [loading, setLoading] = useState(true)
   const [activeDoor, setActiveDoor] = useState<string | null>(null)
-  const [dark, setDark] = useState(false)
+  const [dark, setDark] = useState(() => {
+    const savedTheme = window.localStorage.getItem('portfolio-theme')
+    if (savedTheme === 'dark') return true
+    if (savedTheme === 'light') return false
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
   const [commandOpen, setCommandOpen] = useState(false)
   const activeDoorRef = useRef(activeDoor)
   const lenisRef = useRef<Lenis | null>(null)
@@ -1218,8 +1292,17 @@ export default function App() {
   const onLoaderComplete = useCallback(() => setLoading(false), [])
   const reduced = useReducedMotion()
 
-  const toggleTheme = useCallback(() => setDark((value) => !value), [])
+  const toggleTheme = useCallback(() => {
+    const next = !dark
+    window.localStorage.setItem('portfolio-theme', next ? 'dark' : 'light')
+    setDark(next)
+  }, [dark])
   const openCommandPalette = useCallback(() => setCommandOpen(true), [])
+
+  useEffect(() => {
+    const themeColor = document.querySelector<HTMLMetaElement>('#theme-color')
+    if (themeColor) themeColor.content = dark ? '#171816' : '#f4f1e9'
+  }, [dark])
 
   useEffect(() => {
     const handleCommandShortcut = (event: globalThis.KeyboardEvent) => {
@@ -1323,7 +1406,7 @@ export default function App() {
         <AnimatePresence>{loading && <IntroLoader onComplete={onLoaderComplete} />}</AnimatePresence>
         {!loading && (
           <>
-            <Header onThemeToggle={toggleTheme} onCommandOpen={openCommandPalette} />
+            <Header dark={dark} onThemeToggle={toggleTheme} onCommandOpen={openCommandPalette} />
             <PullCord dark={dark} onToggle={toggleTheme} />
             <AnimatePresence>
               {commandOpen && (
